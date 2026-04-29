@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useSyncExternalStore } from "react";
 import {
   Blocks,
   CircleUserRound,
@@ -15,15 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { signOut } from "@/app/auth/actions";
-
-type AppShellProps = {
-  active: "dashboard" | "integrations" | "projects" | "drafts";
-  children: React.ReactNode;
-  title: string;
-  eyebrow?: string;
-  actionHref?: string;
-  actionLabel?: string;
-};
+import { ActionButton, actionLinkClass, InlineMeta } from "@/components/ui/compliance";
 
 const navItems = [
   { label: "Dashboard", href: "/", active: "dashboard", icon: House },
@@ -31,6 +23,54 @@ const navItems = [
   { label: "Projects", href: "/projects", active: "projects", icon: FolderGit2 },
   { label: "Drafts", href: "/drafts", active: "drafts", icon: FilePenLine },
 ] as const;
+
+const sidebarStorageKey = "tax-incentive-drafter-sidebar-open";
+let sidebarPreference: boolean | null = null;
+const sidebarListeners = new Set<() => void>();
+
+function readSidebarPreference() {
+  if (sidebarPreference !== null) {
+    return sidebarPreference;
+  }
+
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const stored = window.localStorage.getItem(sidebarStorageKey);
+
+  if (stored === "true" || stored === "false") {
+    sidebarPreference = stored === "true";
+    return sidebarPreference;
+  }
+
+  sidebarPreference = window.matchMedia("(min-width: 1024px)").matches;
+  return sidebarPreference;
+}
+
+function subscribeToSidebarPreference(listener: () => void) {
+  sidebarListeners.add(listener);
+  return () => sidebarListeners.delete(listener);
+}
+
+function writeSidebarPreference(nextValue: boolean) {
+  sidebarPreference = nextValue;
+
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(sidebarStorageKey, String(nextValue));
+  }
+
+  sidebarListeners.forEach((listener) => listener());
+}
+
+type AppShellProps = {
+  active: (typeof navItems)[number]["active"];
+  children: React.ReactNode;
+  title: string;
+  eyebrow?: string;
+  actionHref?: string;
+  actionLabel?: string;
+};
 
 export function AppShell({
   active,
@@ -40,10 +80,20 @@ export function AppShell({
   actionHref,
   actionLabel,
 }: AppShellProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const sidebarOpen = useSyncExternalStore(
+    subscribeToSidebarPreference,
+    readSidebarPreference,
+    () => false,
+  );
+
+  function setSidebarOpen(nextValue: boolean | ((current: boolean) => boolean)) {
+    writeSidebarPreference(
+      typeof nextValue === "function" ? nextValue(sidebarOpen) : nextValue,
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-[#f3f5ef] text-[#18201b]">
+    <main className="min-h-screen bg-[#f5f6f1] text-[#18201b]">
       <div
         className={`grid min-h-screen transition-[grid-template-columns] duration-200 ${
           sidebarOpen ? "lg:grid-cols-[264px_1fr]" : "lg:grid-cols-[88px_1fr]"
@@ -105,10 +155,10 @@ export function AppShell({
                     key={item.href}
                     href={item.href}
                     aria-label={item.label}
-                    className={`flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition ${isActive
+                    className={`flex h-10 items-center rounded-lg text-sm transition ${isActive
                         ? "bg-white text-[#101712] shadow-[0_1px_0_rgba(16,23,18,0.08)]"
                         : "text-[#d9e0da] hover:bg-white/8 hover:text-white"
-                      } ${sidebarOpen ? "justify-start" : "justify-center"}`}
+                      } ${sidebarOpen ? "justify-start gap-3 px-3" : "mx-auto w-10 justify-center px-0"}`}
                   >
                     <Icon size={16} strokeWidth={2.1} aria-hidden="true" />
                     <span
@@ -157,8 +207,8 @@ export function AppShell({
         </aside>
 
         <section className="min-w-0">
-          <header className="sticky top-0 z-10 border-b border-[#d9dfd0] bg-[#f9faf5]/90 backdrop-blur">
-            <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between lg:px-8">
+          <header className="sticky top-0 z-10 border-b border-[#d9dfd0] bg-[#fafbf7]/92 backdrop-blur">
+            <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between lg:px-8">
               <div className="flex items-start gap-3">
                 <button
                   type="button"
@@ -173,10 +223,10 @@ export function AppShell({
                   )}
                 </button>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5b6f5e]">
+                  <InlineMeta>
                     {eyebrow}
-                  </p>
-                  <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[#18201b]">
+                  </InlineMeta>
+                  <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-[#18201b]">
                     {title}
                   </h1>
                 </div>
@@ -185,19 +235,19 @@ export function AppShell({
                 {actionHref && actionLabel ? (
                   <Link
                     href={actionHref}
-                    className="inline-flex h-10 items-center gap-2 rounded-md bg-[#1f5d3a] px-4 text-sm font-semibold text-white transition hover:bg-[#17472c]"
+                    className={actionLinkClass("primary")}
                   >
                     <Plus size={16} aria-hidden="true" />
                     {actionLabel}
                   </Link>
                 ) : null}
                 <form action={signOut}>
-                  <button
+                  <ActionButton
                     type="submit"
-                    className="h-10 rounded-md border border-[#cbd3c3] bg-white px-4 text-sm font-medium text-[#263029] transition hover:bg-[#eef2e8]"
+                    variant="secondary"
                   >
                     Sign out
-                  </button>
+                  </ActionButton>
                 </form>
               </div>
             </div>

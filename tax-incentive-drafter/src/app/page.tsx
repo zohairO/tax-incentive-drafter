@@ -1,18 +1,26 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { requireUser } from "@/lib/auth";
+import { MetricBlock, Panel, StatusBadge } from "@/components/ui/compliance";
 import {
-  activityLogs,
-  overviewStats,
-  projects,
-  projectStatusStyles,
-  statusIcons,
+  buildOverviewStats,
+  formatRelativeTime,
+  getDraftRoute,
+  getIntegrationsForCurrentUser,
+  getProjectStatusLabel,
+  getRecentActivity,
+  getDraftsForCurrentUser,
+  projectStatusIcons,
+  requireAppUser,
   workflowCards,
-} from "@/lib/demo-data";
+} from "@/lib/draft-data";
 
 export default async function HomePage() {
-  const user = await requireUser();
+  const user = await requireAppUser();
+  const drafts = await getDraftsForCurrentUser(user);
+  const integrations = await getIntegrationsForCurrentUser(user);
+  const overviewStats = buildOverviewStats(drafts, integrations);
+  const activityLogs = getRecentActivity(drafts);
 
   return (
     <AppShell
@@ -22,39 +30,27 @@ export default async function HomePage() {
       actionHref="/projects/new"
       actionLabel="New Project"
     >
-      <div className="grid gap-6">
+      <div className="grid gap-5">
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {overviewStats.map((stat) => {
-            const Icon = stat.icon;
-
             return (
-              <article
+              <MetricBlock
                 key={stat.label}
-                className="rounded-lg border border-[#d9dfd0] bg-white p-5 shadow-sm"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-[#66705f]">
-                    {stat.label}
-                  </span>
-                  <span className="grid size-9 place-items-center rounded-md bg-[#e9f5dc] text-[#1f5d3a]">
-                    <Icon size={18} aria-hidden="true" />
-                  </span>
-                </div>
-                <p className="mt-5 text-4xl font-semibold tracking-tight">
-                  {stat.value}
-                </p>
-                <p className="mt-1 text-sm text-[#66705f]">{stat.detail}</p>
-              </article>
+                label={stat.label}
+                value={stat.value}
+                detail={stat.detail}
+                icon={stat.icon}
+              />
             );
           })}
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-lg border border-[#d9dfd0] bg-white p-5 shadow-sm">
+        <section className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+          <Panel>
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold tracking-tight">
-                  Active Projects
+                  Active project queue
                 </h2>
                 <p className="mt-1 text-sm text-[#66705f]">
                   Signed in as {user.email}
@@ -69,58 +65,60 @@ export default async function HomePage() {
               </Link>
             </div>
 
-            <div className="mt-5 space-y-3">
-              {projects.map((project) => {
-                const StatusIcon = statusIcons[project.status];
+            <div className="mt-4 divide-y divide-[#e3e8dc]">
+              {drafts.slice(0, 5).map((draft) => {
+                const statusLabel = getProjectStatusLabel(draft);
+                const StatusIcon = projectStatusIcons[statusLabel];
+                const isReady = statusLabel === "Ready to Export";
 
                 return (
                   <Link
-                    key={project.id}
-                    href={`/projects/${project.id}`}
-                    className="flex flex-col gap-4 rounded-lg border border-[#e3e8dc] bg-[#fbfcf8] p-4 transition hover:border-[#a8b99c] sm:flex-row sm:items-center sm:justify-between"
+                    key={draft.id}
+                    href={getDraftRoute(draft.id)}
+                    className="flex flex-col gap-3 px-1 py-4 transition hover:bg-[#fbfcf8] sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div>
                       <h3 className="font-semibold text-[#18201b]">
-                        {project.name}
+                        {draft.name}
                       </h3>
                       <p className="mt-1 text-sm text-[#66705f]">
-                        {project.repo} · Jira {project.jiraScope}
+                        {draft.selected_integrations.length > 0
+                          ? draft.selected_integrations.join(" + ")
+                          : "No integrations selected"}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span
-                        className={`inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-xs font-semibold ${projectStatusStyles[project.status]}`}
-                      >
+                      <StatusBadge tone={isReady ? "success" : "warning"}>
                         <StatusIcon size={14} aria-hidden="true" />
-                        {project.status}
-                      </span>
+                        {statusLabel}
+                      </StatusBadge>
                       <span className="text-sm text-[#66705f]">
-                        {project.lastUpdated}
+                        {formatRelativeTime(draft.updated_at)}
                       </span>
                     </div>
                   </Link>
                 );
               })}
             </div>
-          </div>
+          </Panel>
 
-          <aside className="rounded-lg border border-[#d9dfd0] bg-[#17231b] p-5 text-white shadow-sm">
+          <Panel as="aside" className="bg-[#17231b] text-white">
             <div className="flex items-center gap-3">
-              <span className="grid size-10 place-items-center rounded-md bg-[#c7ff74] text-[#17231b]">
+              <span className="grid size-9 place-items-center rounded-md bg-[#c7ff74] text-[#17231b]">
                 <CheckCircle2 size={19} aria-hidden="true" />
               </span>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#c7ff74]">
-                  Workflow
+                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-[#c7ff74]">
+                  Operating model
                 </p>
-                <h2 className="mt-1 text-lg font-semibold">How this account runs</h2>
+                <h2 className="mt-1 text-lg font-semibold">Evidence workflow</h2>
               </div>
             </div>
-            <div className="mt-6 space-y-3">
+            <div className="mt-5 divide-y divide-white/10">
               {workflowCards.map((card) => (
                 <article
                   key={card.title}
-                  className="rounded-md border border-white/10 bg-white/5 p-3"
+                  className="py-4 first:pt-0 last:pb-0"
                 >
                   <h3 className="text-sm font-semibold">{card.title}</h3>
                   <p className="mt-1 text-sm leading-6 text-[#d9e0da]">
@@ -129,26 +127,26 @@ export default async function HomePage() {
                 </article>
               ))}
             </div>
-          </aside>
+          </Panel>
         </section>
 
-        <section className="rounded-lg border border-[#d9dfd0] bg-white p-5 shadow-sm">
+        <Panel>
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold tracking-tight">
                 Recent Activity
               </h2>
               <p className="mt-1 text-sm text-[#66705f]">
-                Timeline activity now rolls up into draft review instead of a
-                separate logs page.
+                Recent draft updates from Supabase.
               </p>
             </div>
           </div>
-          <div className="mt-5 grid gap-3 md:grid-cols-3">
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
             {activityLogs.map((log) => (
-              <article
+              <Link
+                href={getDraftRoute(log.id)}
                 key={log.id}
-                className="rounded-lg border border-[#e3e8dc] bg-[#fbfcf8] p-4"
+                className="rounded-md border border-[#e3e8dc] bg-[#fbfcf8] p-4 transition hover:border-[#a8b99c]"
               >
                 <p className="text-sm font-semibold">{log.title}</p>
                 <p className="mt-2 text-sm leading-6 text-[#66705f]">
@@ -157,10 +155,10 @@ export default async function HomePage() {
                 <p className="mt-3 text-xs font-medium uppercase tracking-[0.16em] text-[#5b6f5e]">
                   {log.at}
                 </p>
-              </article>
+              </Link>
             ))}
           </div>
-        </section>
+        </Panel>
       </div>
     </AppShell>
   );
