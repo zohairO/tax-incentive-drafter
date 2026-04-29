@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { requireUser } from "@/lib/auth";
-import { projects } from "@/lib/demo-data";
+import { projects, projectStatusStyles, statusIcons } from "@/lib/demo-data";
 
 export default async function ProjectsPage() {
   await requireUser();
@@ -11,6 +11,7 @@ export default async function ProjectsPage() {
     <AppShell
       active="projects"
       title="Projects"
+      eyebrow="Per-project claim workflows"
       actionHref="/projects/new"
       actionLabel="New Project"
     >
@@ -26,22 +27,28 @@ export default async function ProjectsPage() {
                 <h2 className="text-xl font-semibold tracking-tight">
                   {project.name}
                 </h2>
-                <p className="mt-2 text-sm text-[#66705f]">{project.source}</p>
+                <p className="mt-2 text-sm text-[#66705f]">
+                  {project.repo} · Jira {project.jiraScope}
+                </p>
               </div>
               <ArrowRight size={18} aria-hidden="true" />
             </div>
-            <div className="mt-6 grid grid-cols-3 gap-3 text-sm">
+            <div className="mt-6 grid grid-cols-2 gap-3 text-sm">
               <div>
-                <p className="text-[#66705f]">Commits</p>
-                <p className="mt-1 font-semibold">{project.commits}</p>
+                <p className="text-[#66705f]">Claims</p>
+                <p className="mt-1 font-semibold">{project.claimCount}</p>
               </div>
               <div>
-                <p className="text-[#66705f]">Activities</p>
-                <p className="mt-1 font-semibold">{project.activities}</p>
-              </div>
-              <div>
-                <p className="text-[#66705f]">Risk</p>
-                <p className="mt-1 font-semibold">{project.risk}</p>
+                <p className="text-[#66705f]">Status</p>
+                <span
+                  className={`mt-1 inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-xs font-semibold ${projectStatusStyles[project.status]}`}
+                >
+                  {(() => {
+                    const StatusIcon = statusIcons[project.status];
+                    return <StatusIcon size={14} aria-hidden="true" />;
+                  })()}
+                  {project.status}
+                </span>
               </div>
             </div>
           </Link>

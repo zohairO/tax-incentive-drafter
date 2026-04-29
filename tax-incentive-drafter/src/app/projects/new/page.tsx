@@ -15,12 +15,12 @@ export default async function NewProjectPage() {
             What starts now
           </p>
           <h2 className="mt-3 text-2xl font-semibold tracking-tight">
-            The agent chain creates a traceable project workspace.
+            This wizard scopes one reportable project at a time.
           </h2>
           <div className="mt-6 space-y-4 text-sm leading-6 text-[#e5ece4]">
-            <p>Extractor reads the engineering trail.</p>
-            <p>Classifier groups candidate R&D activity signals.</p>
-            <p>Drafter, mapper, and risk reviewer prepare the adviser pack.</p>
+            <p>Step 1 captures the project basics and claimable scope.</p>
+            <p>Step 2 chooses which connected systems to use for context.</p>
+            <p>Step 3 hands off to the agent and opens a resumable draft.</p>
           </div>
         </aside>
       </section>

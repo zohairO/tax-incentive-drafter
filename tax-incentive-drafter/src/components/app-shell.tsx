@@ -1,17 +1,17 @@
 import Link from "next/link";
 import {
-  DatabaseZap,
   FileArchive,
   FileText,
   FolderKanban,
   LayoutDashboard,
+  ListTree,
   Plus,
-  Settings,
+  PlugZap,
 } from "lucide-react";
 import { signOut } from "@/app/auth/actions";
 
 type AppShellProps = {
-  active: "dashboard" | "projects" | "drafts" | "evidence" | "settings";
+  active: "dashboard" | "integrations" | "projects" | "drafts" | "logs";
   children: React.ReactNode;
   title: string;
   eyebrow?: string;
@@ -20,11 +20,10 @@ type AppShellProps = {
 };
 
 const navItems = [
-  { label: "Dashboard", href: "/dashboard", active: "dashboard", icon: LayoutDashboard },
+  { label: "Dashboard", href: "/", active: "dashboard", icon: LayoutDashboard },
+  { label: "Integrations", href: "/integrations", active: "integrations", icon: PlugZap },
   { label: "Projects", href: "/projects", active: "projects", icon: FolderKanban },
   { label: "Drafts", href: "/drafts", active: "drafts", icon: FileText },
-  { label: "Evidence", href: "/evidence", active: "evidence", icon: DatabaseZap },
-  { label: "Settings", href: "/settings", active: "settings", icon: Settings },
 ] as const;
 
 export function AppShell({
@@ -40,7 +39,7 @@ export function AppShell({
       <div className="grid min-h-screen lg:grid-cols-[264px_1fr]">
         <aside className="border-r border-[#d9dfd0] bg-[#101712] text-white">
           <div className="flex h-full flex-col px-4 py-5">
-            <Link href="/dashboard" className="flex items-center gap-3 px-2">
+            <Link href="/" className="flex items-center gap-3 px-2">
               <span className="grid size-10 place-items-center rounded-md bg-[#c7ff74] text-[#101712]">
                 <FileArchive size={20} aria-hidden="true" />
               </span>
@@ -59,11 +58,10 @@ export function AppShell({
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex h-10 items-center gap-3 rounded-md px-3 text-sm transition ${
-                      isActive
+                    className={`flex h-10 items-center gap-3 rounded-md px-3 text-sm transition ${isActive
                         ? "bg-white text-[#101712]"
                         : "text-[#d9e0da] hover:bg-white/10 hover:text-white"
-                    }`}
+                      }`}
                   >
                     <Icon size={17} aria-hidden="true" />
                     {item.label}
@@ -74,10 +72,10 @@ export function AppShell({
 
             <div className="mt-auto rounded-md border border-white/10 bg-white/5 p-3">
               <p className="text-xs font-semibold uppercase text-[#c7ff74]">
-                Agent Chain
+                Workflow
               </p>
               <p className="mt-2 text-sm leading-5 text-[#d9e0da]">
-                Extract, classify, draft, map evidence, review risk, export.
+                Connect integrations, scope a project, review the draft, then export.
               </p>
             </div>
           </div>
