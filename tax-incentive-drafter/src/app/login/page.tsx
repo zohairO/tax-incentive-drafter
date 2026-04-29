@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { signInWithEmail } from "@/app/auth/actions";
+import { continueInPreview, signInWithEmail } from "@/app/auth/actions";
+import { isDevAuthPreview } from "@/lib/auth";
 
 type LoginPageProps = {
   searchParams: Promise<{
@@ -12,6 +13,7 @@ type LoginPageProps = {
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
   const next = params.next ?? "/dashboard";
+  const isPreview = isDevAuthPreview();
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#f7f3ea] px-6 py-12 text-[#171717]">
@@ -20,33 +22,49 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           Tax Incentive Drafter
         </Link>
         <h1 className="mt-6 text-3xl font-semibold tracking-tight">
-          Sign in to your evidence workspace
+          {isPreview
+            ? "Continue to the preview workspace"
+            : "Sign in to your evidence workspace"}
         </h1>
         <p className="mt-3 text-sm leading-6 text-[#5f5a50]">
-          We will send you a secure email link. No password needed.
+          {isPreview
+            ? "Supabase is not configured locally yet, so this preview uses a demo founder session."
+            : "We will send you a secure email link. No password needed."}
         </p>
 
-        <form action={signInWithEmail} className="mt-8 space-y-4">
-          <input type="hidden" name="next" value={next} />
-          <label className="block text-sm font-medium" htmlFor="email">
-            Work email
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            required
-            autoComplete="email"
-            placeholder="founder@startup.com"
-            className="h-12 w-full rounded-md border border-[#c8c0b1] bg-white px-4 text-base outline-none transition focus:border-[#4d674d] focus:ring-4 focus:ring-[#4d674d]/15"
-          />
-          <button
-            type="submit"
-            className="h-12 w-full rounded-md bg-[#214e34] px-4 text-sm font-semibold text-white transition hover:bg-[#183b27]"
-          >
-            Send sign-in link
-          </button>
-        </form>
+        {isPreview ? (
+          <form action={continueInPreview} className="mt-8">
+            <input type="hidden" name="next" value={next} />
+            <button
+              type="submit"
+              className="h-12 w-full rounded-md bg-[#214e34] px-4 text-sm font-semibold text-white transition hover:bg-[#183b27]"
+            >
+              Continue in preview mode
+            </button>
+          </form>
+        ) : (
+          <form action={signInWithEmail} className="mt-8 space-y-4">
+            <input type="hidden" name="next" value={next} />
+            <label className="block text-sm font-medium" htmlFor="email">
+              Work email
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="founder@startup.com"
+              className="h-12 w-full rounded-md border border-[#c8c0b1] bg-white px-4 text-base outline-none transition focus:border-[#4d674d] focus:ring-4 focus:ring-[#4d674d]/15"
+            />
+            <button
+              type="submit"
+              className="h-12 w-full rounded-md bg-[#214e34] px-4 text-sm font-semibold text-white transition hover:bg-[#183b27]"
+            >
+              Send sign-in link
+            </button>
+          </form>
+        )}
 
         {params.error ? (
           <p className="mt-5 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">

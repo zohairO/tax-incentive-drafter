@@ -40,23 +40,16 @@ This repository currently contains the first backend foundation:
 
 ## Getting started
 
+If you cloned the repository, enter the app directory first:
+
+```bash
+cd tax-incentive-drafter
+```
+
 Install dependencies:
 
 ```bash
 npm install
-```
-
-Create a local environment file:
-
-```bash
-cp .env.example .env.local
-```
-
-Add your Supabase credentials:
-
-```bash
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
 Run the development server:
@@ -66,6 +59,27 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+## Local preview auth
+
+Supabase credentials are optional for local product review. If `.env.local` does not contain Supabase credentials, the app runs in preview mode:
+
+- `/login` shows a "Continue in preview mode" button
+- protected app routes use a demo founder session
+- collaborators and testers can click through the dashboard, project setup, and pipeline UI without needing shared Supabase keys
+
+To test real email auth locally, create a local environment file:
+
+```bash
+cp .env.example .env.local
+```
+
+Then add your Supabase credentials:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
 ## Supabase setup
 

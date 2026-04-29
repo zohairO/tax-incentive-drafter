@@ -47,6 +47,16 @@ export async function signInWithEmail(formData: FormData) {
   );
 }
 
+export async function continueInPreview(formData: FormData) {
+  const next = String(formData.get("next") ?? "/dashboard");
+
+  if (isDevAuthPreview()) {
+    redirect(next);
+  }
+
+  redirect("/login");
+}
+
 export async function signOut() {
   if (isDevAuthPreview()) {
     redirect("/");
