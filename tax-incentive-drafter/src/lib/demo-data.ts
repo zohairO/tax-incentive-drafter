@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react";
+import type { ComponentType } from "react";
 import {
   ArrowUpRight,
   CheckCircle2,
@@ -6,26 +6,36 @@ import {
   Clock3,
   FileText,
   FolderKanban,
-  GitBranchPlus,
-  ListChecks,
   PlugZap,
   ShieldAlert,
 } from "lucide-react";
+import {
+  ConfluenceLogo,
+  GitHubLogo,
+  JiraLogo,
+  LinearLogo,
+  SlackLogo,
+} from "@/components/integration-icons";
 
-export type ProjectStatus = "Draft Ready" | "Generating" | "Needs Review";
+export type ProjectStatus =
+  | "Scope Locked"
+  | "Generation Running"
+  | "Review Window Open";
 export type DraftStatus = "Generating" | "In Review" | "Ready to Export";
-export type IntegrationStatus = "Connected" | "Needs Attention";
+export type IntegrationStatus = "Available" | "Connected" | "Needs Attention";
 export type DraftSectionType = "claim" | "question";
 
 export type Project = {
   id: string;
   name: string;
+  summary: string;
   repo: string;
   jiraScope: string;
   status: ProjectStatus;
   lastUpdated: string;
   draftId: string;
   claimCount: number;
+  sources: string[];
 };
 
 export type DraftSection = {
@@ -56,7 +66,11 @@ export type Integration = {
   description: string;
   status: IntegrationStatus;
   detail: string;
-  icon: LucideIcon;
+  icon: ComponentType<{
+    size?: string | number;
+    className?: string;
+    "aria-hidden"?: boolean;
+  }>;
 };
 
 export type ActivityLog = {
@@ -73,7 +87,7 @@ export const integrations: Integration[] = [
     description: "Repos, branches, PRs, commits, and linked code evidence.",
     status: "Connected",
     detail: "Connected to Acme Ventures sandbox",
-    icon: GitBranchPlus,
+    icon: GitHubLogo,
   },
   {
     id: "jira",
@@ -81,7 +95,31 @@ export const integrations: Integration[] = [
     description: "Projects, tickets, epics, and sprint context.",
     status: "Connected",
     detail: "Connected to product-delivery workspace",
-    icon: ListChecks,
+    icon: JiraLogo,
+  },
+  {
+    id: "slack",
+    name: "Slack",
+    description: "Team conversations, channel context, and linked delivery decisions.",
+    status: "Available",
+    detail: "Placeholder integration for future account-level setup",
+    icon: SlackLogo,
+  },
+  {
+    id: "confluence",
+    name: "Confluence",
+    description: "Specs, knowledge base pages, and engineering notes.",
+    status: "Available",
+    detail: "Placeholder integration for future account-level setup",
+    icon: ConfluenceLogo,
+  },
+  {
+    id: "linear",
+    name: "Linear",
+    description: "Issue tracking, cycles, and product planning context.",
+    status: "Available",
+    detail: "Placeholder integration for future account-level setup",
+    icon: LinearLogo,
   },
 ];
 
@@ -89,32 +127,41 @@ export const projects: Project[] = [
   {
     id: "ai-search-tool",
     name: "AI Search Tool",
+    summary:
+      "Search infrastructure work scoped around retrieval performance, benchmark loops, and candidate uncertainty evidence.",
     repo: "acme/search-lab",
     jiraScope: "SEARCH",
-    status: "In Review" as never,
+    status: "Review Window Open",
     lastUpdated: "2 hrs ago",
     draftId: "draft-ai-search-tool",
     claimCount: 6,
+    sources: ["GitHub", "Jira"],
   },
   {
     id: "ml-engine",
     name: "ML Engine",
+    summary:
+      "Model runtime project focused on inference pipeline changes and unresolved delivery constraints.",
     repo: "acme/ml-runtime",
     jiraScope: "ML",
-    status: "Generating",
+    status: "Generation Running",
     lastUpdated: "Today",
     draftId: "draft-ml-engine",
     claimCount: 4,
+    sources: ["GitHub", "Jira"],
   },
   {
     id: "saas-platform",
     name: "SaaS Platform",
+    summary:
+      "Platform-wide claim scope covering multi-tenant reliability work and previously reviewed founder notes.",
     repo: "acme/platform",
     jiraScope: "PLATFORM",
-    status: "Draft Ready",
+    status: "Review Window Open",
     lastUpdated: "3 days ago",
     draftId: "draft-saas-platform",
     claimCount: 5,
+    sources: ["GitHub", "Jira"],
   },
 ];
 
@@ -272,12 +319,6 @@ export const activityLogs: ActivityLog[] = [
 
 export const draftListCards = [
   {
-    id: "generating",
-    label: "Generating",
-    value: drafts.filter((draft) => draft.status === "Generating").length,
-    icon: CircleDashed,
-  },
-  {
     id: "review",
     label: "In Review",
     value: drafts.filter((draft) => draft.status === "In Review").length,
@@ -292,9 +333,9 @@ export const draftListCards = [
 ];
 
 export const projectStatusStyles = {
-  "Draft Ready": "border-[#abd9b7] bg-[#effaf1] text-[#235c33]",
-  Generating: "border-[#9cc6e5] bg-[#edf7ff] text-[#1b5d88]",
-  "Needs Review": "border-[#ead49b] bg-[#fff8df] text-[#745318]",
+  "Scope Locked": "border-[#d7decb] bg-[#f6f8f2] text-[#4f5c49]",
+  "Generation Running": "border-[#9cc6e5] bg-[#edf7ff] text-[#1b5d88]",
+  "Review Window Open": "border-[#ead49b] bg-[#fff8df] text-[#745318]",
 } as const;
 
 export const draftStatusStyles = {
@@ -307,8 +348,9 @@ export const statusIcons = {
   Generating: CircleDashed,
   "In Review": Clock3,
   "Ready to Export": CheckCircle2,
-  "Draft Ready": ArrowUpRight,
-  "Needs Review": ShieldAlert,
+  "Scope Locked": ShieldAlert,
+  "Generation Running": CircleDashed,
+  "Review Window Open": ArrowUpRight,
 } as const;
 
 export function getProject(projectId: string) {

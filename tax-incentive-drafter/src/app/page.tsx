@@ -18,7 +18,7 @@ export default async function HomePage() {
     <AppShell
       active="dashboard"
       title="Dashboard"
-      eyebrow="Portfolio workspace"
+      eyebrow="Account overview"
       actionHref="/projects/new"
       actionLabel="New Project"
     >
@@ -134,14 +134,15 @@ export default async function HomePage() {
 
         <section className="rounded-lg border border-[#d9dfd0] bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold tracking-tight">Recent Activity</h2>
-            <Link
-              href="/logs"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-[#1f5d3a]"
-            >
-              Open logs
-              <ArrowRight size={16} aria-hidden="true" />
-            </Link>
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight">
+                Recent Activity
+              </h2>
+              <p className="mt-1 text-sm text-[#66705f]">
+                Timeline activity now rolls up into draft review instead of a
+                separate logs page.
+              </p>
+            </div>
           </div>
           <div className="mt-5 grid gap-3 md:grid-cols-3">
             {activityLogs.map((log) => (

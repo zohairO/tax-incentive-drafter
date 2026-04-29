@@ -16,7 +16,7 @@ function redirectWithStatus(
 
 export async function signInWithEmail(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const next = String(formData.get("next") ?? "/dashboard");
+  const next = String(formData.get("next") ?? "/");
 
   if (!email) {
     redirectWithStatus("/login", "error", "Enter an email address.");
@@ -48,7 +48,7 @@ export async function signInWithEmail(formData: FormData) {
 }
 
 export async function continueInPreview(formData: FormData) {
-  const next = String(formData.get("next") ?? "/dashboard");
+  const next = String(formData.get("next") ?? "/");
 
   if (isDevAuthPreview()) {
     redirect(next);

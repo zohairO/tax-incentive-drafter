@@ -12,7 +12,7 @@ type LoginPageProps = {
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
-  const next = params.next ?? "/dashboard";
+  const next = params.next ?? "/";
   const isPreview = isDevAuthPreview();
 
   return (
