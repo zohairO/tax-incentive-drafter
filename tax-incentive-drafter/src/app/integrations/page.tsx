@@ -1,10 +1,14 @@
-import { CheckCircle2, PlugZap } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { requireUser } from "@/lib/auth";
-import { integrations } from "@/lib/demo-data";
+import { ActionButton, Panel, StatusBadge } from "@/components/ui/compliance";
+import { getIntegrationsForCurrentUser } from "@/lib/draft-data";
+import {
+  formatIntegrationStatus,
+  getIntegrationDefinition,
+} from "@/lib/integrations";
 
 export default async function IntegrationsPage() {
-  await requireUser();
+  const integrations = await getIntegrationsForCurrentUser();
 
   return (
     <AppShell
@@ -12,70 +16,61 @@ export default async function IntegrationsPage() {
       title="Integrations"
       eyebrow="Connect once and reuse everywhere"
     >
-      <div className="grid gap-6">
-        <section className="rounded-lg border border-[#d9dfd0] bg-[#17231b] p-6 text-white shadow-sm">
-          <div className="flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-md bg-[#c7ff74] text-[#17231b]">
-              <PlugZap size={19} aria-hidden="true" />
-            </span>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#c7ff74]">
-                Account-level setup
-              </p>
-              <h2 className="mt-1 text-lg font-semibold">
-                Projects should consume existing connections.
-              </h2>
-            </div>
-          </div>
-        </section>
-
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-5">
+        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {integrations.map((integration) => {
-            const Icon = integration.icon;
-            const isConnected = integration.status === "Connected";
+            const definition = getIntegrationDefinition(integration.type);
+
+            if (!definition) {
+              return null;
+            }
+
+            const Icon = definition.icon;
+            const isConnected = integration.status === "connected";
 
             return (
-              <article
-                key={integration.id}
-                className="relative flex min-h-[248px] flex-col rounded-lg border border-[#d9dfd0] bg-white p-5 shadow-sm"
+              <Panel
+                as="article"
+                compact
+                key={integration.type}
+                className="flex min-h-[250px] flex-col gap-4"
               >
-                {isConnected ? (
-                  <span className="absolute top-4 right-4 inline-flex items-center gap-2 rounded-full border border-[#abd9b7] bg-[#effaf1] px-2.5 py-1 text-xs font-semibold text-[#235c33]">
-                    <CheckCircle2 size={14} aria-hidden="true" />
-                    Connected
-                  </span>
-                ) : null}
-                <div className="pr-28">
-                  <div className="flex items-center gap-3">
-                    <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-[#eef6e6] text-[#1f5d3a]">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start gap-3">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-md bg-[#eef3e8] text-[#1f5d3a]">
                       <Icon className="size-6" aria-hidden={true} />
                     </span>
-                    <h2 className="text-[1.35rem] font-semibold leading-none tracking-tight">
-                      {integration.name}
-                    </h2>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-lg font-semibold tracking-tight">
+                          {definition.name}
+                        </h2>
+                        <StatusBadge tone={isConnected ? "success" : "neutral"}>
+                          {isConnected ? <CheckCircle2 size={14} aria-hidden="true" /> : null}
+                          {formatIntegrationStatus(integration.status)}
+                        </StatusBadge>
+                      </div>
+                      <p className="mt-2 text-sm leading-6 text-[#66705f]">
+                        {definition.description}
+                      </p>
+                    </div>
                   </div>
-                  <div className="mt-4">
-                    <p className="text-sm leading-7 text-[#66705f]">
-                      {integration.description}
-                    </p>
-                  </div>
+                  <p className="mt-4 text-sm leading-6 text-[#66705f]">
+                    {integration.account_name
+                      ? `Connected to ${integration.account_name}`
+                      : definition.defaultDetail}
+                  </p>
                 </div>
-                <p className="mt-5 text-sm leading-6 text-[#66705f]">
-                  {integration.detail}
-                </p>
-                <div className="mt-auto pt-6">
-                  <button
+                <div className="mt-auto">
+                  <ActionButton
                     type="button"
-                    className={`inline-flex h-11 w-full items-center justify-center rounded-md px-4 text-sm font-semibold transition ${
-                      isConnected
-                        ? "border border-[#cbd3c3] bg-white text-[#263029] hover:bg-[#eef2e8]"
-                        : "bg-[#1f5d3a] text-white hover:bg-[#17472c]"
-                    }`}
+                    variant={isConnected ? "secondary" : "muted"}
+                    className="w-full"
                   >
                     {isConnected ? "Disconnect" : "Connect"}
-                  </button>
+                  </ActionButton>
                 </div>
-              </article>
+              </Panel>
             );
           })}
         </section>
