@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { continueInPreview, signInWithEmail } from "@/app/auth/actions";
+import {
+  continueInPreview,
+  signInWithPassword,
+  signUpWithPassword,
+} from "@/app/auth/actions";
 import { isDevAuthPreview } from "@/lib/auth";
 
 type LoginPageProps = {
@@ -29,7 +33,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <p className="mt-3 text-sm leading-6 text-[#5f5a50]">
           {isPreview
             ? "Supabase is not configured locally yet, so this preview uses a demo founder session."
-            : "We will send you a secure email link. No password needed."}
+            : "Use email and password. New users can create an account from the same form."}
         </p>
 
         {isPreview ? (
@@ -43,7 +47,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </button>
           </form>
         ) : (
-          <form action={signInWithEmail} className="mt-8 space-y-4">
+          <form action={signInWithPassword} className="mt-8 space-y-4">
             <input type="hidden" name="next" value={next} />
             <label className="block text-sm font-medium" htmlFor="email">
               Work email
@@ -57,11 +61,31 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               placeholder="founder@startup.com"
               className="h-12 w-full rounded-md border border-[#c8c0b1] bg-white px-4 text-base outline-none transition focus:border-[#4d674d] focus:ring-4 focus:ring-[#4d674d]/15"
             />
+            <label className="block text-sm font-medium" htmlFor="password">
+              Password
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              minLength={8}
+              autoComplete="current-password"
+              placeholder="At least 8 characters"
+              className="h-12 w-full rounded-md border border-[#c8c0b1] bg-white px-4 text-base outline-none transition focus:border-[#4d674d] focus:ring-4 focus:ring-[#4d674d]/15"
+            />
             <button
               type="submit"
               className="h-12 w-full rounded-md bg-[#214e34] px-4 text-sm font-semibold text-white transition hover:bg-[#183b27]"
             >
-              Send sign-in link
+              Sign in
+            </button>
+            <button
+              type="submit"
+              formAction={signUpWithPassword}
+              className="h-12 w-full rounded-md border border-[#c8c0b1] bg-white px-4 text-sm font-semibold text-[#214e34] transition hover:bg-[#f7f3ea]"
+            >
+              Create account
             </button>
           </form>
         )}

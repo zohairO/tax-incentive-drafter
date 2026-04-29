@@ -14,13 +14,44 @@ function redirectWithStatus(
   redirect(`${path}?${params.toString()}`);
 }
 
-export async function signInWithEmail(formData: FormData) {
+function getCredentials(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
   const next = String(formData.get("next") ?? "/dashboard");
 
   if (!email) {
     redirectWithStatus("/login", "error", "Enter an email address.");
   }
+
+  if (password.length < 8) {
+    redirectWithStatus("/login", "error", "Password must be at least 8 characters.");
+  }
+
+  return { email, password, next };
+}
+
+export async function signInWithPassword(formData: FormData) {
+  const { email, password, next } = getCredentials(formData);
+
+  if (isDevAuthPreview()) {
+    redirect(next);
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) {
+    redirectWithStatus("/login", "error", error.message);
+  }
+
+  redirect(next);
+}
+
+export async function signUpWithPassword(formData: FormData) {
+  const { email, password, next } = getCredentials(formData);
 
   if (isDevAuthPreview()) {
     redirect(next);
@@ -28,9 +59,9 @@ export async function signInWithEmail(formData: FormData) {
 
   const origin = (await headers()).get("origin");
   const supabase = await createClient();
-
-  const { error } = await supabase.auth.signInWithOtp({
+  const { data, error } = await supabase.auth.signUp({
     email,
+    password,
     options: {
       emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
     },
@@ -40,10 +71,14 @@ export async function signInWithEmail(formData: FormData) {
     redirectWithStatus("/login", "error", error.message);
   }
 
+  if (data.session) {
+    redirect(next);
+  }
+
   redirectWithStatus(
     "/login",
     "message",
-    "Check your email for a secure sign-in link.",
+    "Account created. Check your email once to verify it, then sign in with your password.",
   );
 }
 

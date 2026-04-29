@@ -24,7 +24,7 @@ This repository currently contains the first backend foundation:
 
 - Next.js App Router project
 - Supabase client and server helpers
-- Magic-link email authentication
+- Supabase email/password authentication
 - Protected `/dashboard` route
 - Auth callback route at `/auth/callback`
 - Product-shaped landing page for the R&D evidence scanner
@@ -68,7 +68,7 @@ Supabase credentials are optional for local product review. If `.env.local` does
 - protected app routes use a demo founder session
 - collaborators and testers can click through the dashboard, project setup, and pipeline UI without needing shared Supabase keys
 
-To test real email auth locally, create a local environment file:
+To test real email/password auth locally, create a local environment file:
 
 ```bash
 cp .env.example .env.local
@@ -95,7 +95,9 @@ For production, also add the deployed callback URL:
 https://your-domain.com/auth/callback
 ```
 
-The app uses passwordless email magic links. Users sign in at `/login`, Supabase redirects back through `/auth/callback`, and authenticated users can access `/dashboard`.
+The app uses email/password auth. Users can sign in or create an account at `/login`, and authenticated users can access `/dashboard`.
+
+For the smoothest hackathon testing flow, disable required email confirmations in Supabase Auth settings. If confirmations stay enabled, new users may need to verify their account once before signing in with their password.
 
 ## Useful commands
 
