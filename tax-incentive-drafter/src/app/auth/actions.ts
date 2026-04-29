@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { isDevAuthPreview } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 function redirectWithStatus(
@@ -19,6 +20,10 @@ export async function signInWithEmail(formData: FormData) {
 
   if (!email) {
     redirectWithStatus("/login", "error", "Enter an email address.");
+  }
+
+  if (isDevAuthPreview()) {
+    redirect(next);
   }
 
   const origin = (await headers()).get("origin");
@@ -43,6 +48,10 @@ export async function signInWithEmail(formData: FormData) {
 }
 
 export async function signOut() {
+  if (isDevAuthPreview()) {
+    redirect("/");
+  }
+
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/");

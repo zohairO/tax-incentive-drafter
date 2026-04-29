@@ -1,12 +1,19 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export async function requireUser() {
-  const hasSupabaseConfig =
+export function hasSupabaseConfig() {
+  return (
     Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
-    Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+    Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+  );
+}
 
-  if (!hasSupabaseConfig && process.env.NODE_ENV !== "production") {
+export function isDevAuthPreview() {
+  return !hasSupabaseConfig() && process.env.NODE_ENV !== "production";
+}
+
+export async function requireUser() {
+  if (isDevAuthPreview()) {
     return {
       email: "founder@startup.com",
     };
