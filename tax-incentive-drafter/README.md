@@ -24,7 +24,7 @@ This repository currently contains the first backend foundation:
 
 - Next.js App Router project
 - Supabase client and server helpers
-- Magic-link email authentication
+- Email and password authentication
 - Protected `/dashboard` route
 - Auth callback route at `/auth/callback`
 - Product-shaped landing page for the R&D evidence scanner
@@ -83,7 +83,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 ## Supabase setup
 
-In Supabase, enable email authentication and add the local callback URL to your auth redirect URLs:
+In Supabase, enable email/password authentication and add the local callback URL to your auth redirect URLs:
 
 ```text
 http://localhost:3000/auth/callback
@@ -95,7 +95,7 @@ For production, also add the deployed callback URL:
 https://your-domain.com/auth/callback
 ```
 
-The app uses passwordless email magic links. Users sign in at `/login`, Supabase redirects back through `/auth/callback`, and authenticated users can access `/dashboard`.
+The app uses Supabase email/password auth. Users can sign in or create an account at `/login`; account confirmation links redirect through `/auth/callback`, and authenticated users can access the app workspace.
 
 ## Useful commands
 
