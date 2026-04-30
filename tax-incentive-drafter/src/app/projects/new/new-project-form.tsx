@@ -19,10 +19,12 @@ type IntegrationRow = {
   type: IntegrationType;
   status: IntegrationStatus;
   account_name: string | null;
+  auth_metadata: Record<string, unknown>;
 };
 
 type NewProjectFormProps = {
   integrations: IntegrationRow[];
+  scopeOptions: Partial<Record<IntegrationType, string[]>>;
 };
 
 type IntegrationConfig = {
@@ -59,19 +61,105 @@ const integrationConfigs: Record<IntegrationType, IntegrationConfig> = {
   },
 };
 
+function getStoredGitHubRepos(metadata: Record<string, unknown>) {
+  const repositories = metadata.sample_repositories;
+
+  if (!Array.isArray(repositories)) {
+    return [];
+  }
+
+  return repositories
+    .map((repo) => {
+      if (!repo || typeof repo !== "object" || !("fullName" in repo)) {
+        return "";
+      }
+
+      return String(repo.fullName);
+    })
+    .filter(Boolean);
+}
+
+function getStoredJiraProjects(metadata: Record<string, unknown>) {
+  const projects = metadata.projects;
+
+  if (!Array.isArray(projects)) {
+    return [];
+  }
+
+  return projects
+    .map((project) => {
+      if (!project || typeof project !== "object") {
+        return "";
+      }
+
+      const key = "key" in project ? String(project.key ?? "") : "";
+      const name = "name" in project ? String(project.name ?? "") : "";
+
+      if (!key && !name) {
+        return "";
+      }
+
+      return key && name ? `${key} - ${name}` : key || name;
+    })
+    .filter(Boolean);
+}
+
+function getScopeConfig(
+  integrationId: IntegrationType,
+  metadata: Record<string, unknown>,
+  scopeOptions: Partial<Record<IntegrationType, string[]>>,
+): IntegrationConfig {
+  const baseConfig = integrationConfigs[integrationId];
+
+  if (integrationId === "github") {
+    const repositories = scopeOptions.github ?? getStoredGitHubRepos(metadata);
+
+    return {
+      ...baseConfig,
+      options: repositories.length > 0 ? repositories : baseConfig.options,
+    };
+  }
+
+  if (integrationId === "jira") {
+    const projects = scopeOptions.jira ?? getStoredJiraProjects(metadata);
+
+    return {
+      ...baseConfig,
+      heading: "Select Jira projects",
+      helper: "Choose the Jira projects visible to your connected Jira account.",
+      options: projects.length > 0 ? projects : baseConfig.options,
+    };
+  }
+
+  return baseConfig;
+}
+
 const stepLabels = [
   { id: 1, label: "Basics" },
   { id: 2, label: "Integrations" },
   { id: 3, label: "Internal Scope" },
 ] as const;
 
-export function NewProjectForm({ integrations }: NewProjectFormProps) {
+const dateRangePresets = [
+  { label: "30 days", days: 30 },
+  { label: "60 days", days: 60 },
+  { label: "90 days", days: 90 },
+] as const;
+
+function formatDateInput(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+export function NewProjectForm({ integrations, scopeOptions }: NewProjectFormProps) {
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
   const [projectName, setProjectName] = useState("");
   const [projectSummary, setProjectSummary] = useState("");
+  const [dateStart, setDateStart] = useState("");
+  const [dateEnd, setDateEnd] = useState("");
   const [selectedIntegrations, setSelectedIntegrations] = useState<IntegrationType[]>([]);
   const [selectedSources, setSelectedSources] = useState<Record<string, string[]>>({});
+  const [scopeSearches, setScopeSearches] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
 
@@ -82,6 +170,7 @@ export function NewProjectForm({ integrations }: NewProjectFormProps) {
         ...definition,
         status: row?.status ?? "available",
         accountName: row?.account_name ?? null,
+        authMetadata: row?.auth_metadata ?? {},
       };
     });
   }, [integrations]);
@@ -108,10 +197,9 @@ export function NewProjectForm({ integrations }: NewProjectFormProps) {
         return next;
       }
 
-      const defaults = integrationConfigs[integrationId].options.slice(0, 1);
       setSelectedSources((sources) => ({
         ...sources,
-        [integrationId]: sources[integrationId] ?? defaults,
+        [integrationId]: sources[integrationId] ?? [],
       }));
       return [...current, integrationId];
     });
@@ -137,6 +225,16 @@ export function NewProjectForm({ integrations }: NewProjectFormProps) {
     if (step === 1) {
       if (!projectName.trim() || !projectSummary.trim()) {
         setError("Add a project name and summary before continuing.");
+        return;
+      }
+
+      if (!dateStart || !dateEnd) {
+        setError("Choose a start and end date before continuing.");
+        return;
+      }
+
+      if (dateStart > dateEnd) {
+        setError("Start date must be before the end date.");
         return;
       }
       setStep(2);
@@ -169,6 +267,8 @@ export function NewProjectForm({ integrations }: NewProjectFormProps) {
         const draft = await createDraftProject({
           name: projectName,
           summary: projectSummary,
+          dateStart,
+          dateEnd,
           selectedIntegrations,
           integrationConfig: selectedSources,
         });
@@ -177,6 +277,15 @@ export function NewProjectForm({ integrations }: NewProjectFormProps) {
         setError(caughtError instanceof Error ? caughtError.message : "Could not create draft.");
       }
     });
+  }
+
+  function applyDatePreset(days: number) {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - days);
+    setDateStart(formatDateInput(start));
+    setDateEnd(formatDateInput(end));
+    setError("");
   }
 
   return (
@@ -246,6 +355,52 @@ export function NewProjectForm({ integrations }: NewProjectFormProps) {
               placeholder="Summarise the technical work, uncertainty, or delivery area this draft should investigate."
               className="mt-2 min-h-36 w-full rounded-md border border-[#cbd3c3] bg-white px-4 py-3 text-base outline-none transition focus:border-[#1f5d3a] focus:ring-4 focus:ring-[#1f5d3a]/10"
             />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <p className="text-sm font-semibold text-[#263029]">
+                Date Range
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {dateRangePresets.map((preset) => {
+                  return (
+                    <button
+                      key={preset.days}
+                      type="button"
+                      onClick={() => applyDatePreset(preset.days)}
+                      className="rounded-md border border-[#cbd3c3] bg-white px-3 py-2 text-sm font-semibold text-[#263029] transition hover:border-[#1f5d3a] hover:bg-[#eef6e6] hover:text-[#1f5d3a]"
+                    >
+                      Last {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <label htmlFor="date-start" className="block text-sm font-semibold text-[#263029]">
+                Start Date
+              </label>
+              <input
+                id="date-start"
+                type="date"
+                value={dateStart}
+                onChange={(event) => setDateStart(event.target.value)}
+                className="mt-2 h-12 w-full rounded-md border border-[#cbd3c3] bg-white px-4 text-base outline-none transition focus:border-[#1f5d3a] focus:ring-4 focus:ring-[#1f5d3a]/10"
+              />
+            </div>
+            <div>
+              <label htmlFor="date-end" className="block text-sm font-semibold text-[#263029]">
+                End Date
+              </label>
+              <input
+                id="date-end"
+                type="date"
+                value={dateEnd}
+                onChange={(event) => setDateEnd(event.target.value)}
+                className="mt-2 h-12 w-full rounded-md border border-[#cbd3c3] bg-white px-4 text-base outline-none transition focus:border-[#1f5d3a] focus:ring-4 focus:ring-[#1f5d3a]/10"
+              />
+            </div>
           </div>
         </div>
       ) : null}
@@ -326,8 +481,19 @@ export function NewProjectForm({ integrations }: NewProjectFormProps) {
           {selectedIntegrationObjects.map((integration) => {
             const definition = getIntegrationDefinition(integration.id);
             const Icon = definition?.icon;
-            const config = integrationConfigs[integration.id];
+            const config = getScopeConfig(
+              integration.id,
+              integration.authMetadata,
+              scopeOptions,
+            );
             const scopedOptions = selectedSources[integration.id] ?? [];
+            const searchValue = scopeSearches[integration.id] ?? "";
+            const normalizedSearch = searchValue.trim().toLowerCase();
+            const visibleOptions = normalizedSearch
+              ? config.options.filter((option) =>
+                  option.toLowerCase().includes(normalizedSearch),
+                )
+              : config.options.slice(0, 5);
 
             if (!Icon) {
               return null;
@@ -353,7 +519,29 @@ export function NewProjectForm({ integrations }: NewProjectFormProps) {
                 </div>
 
                 <div className="mt-5 grid gap-2 sm:grid-cols-2">
-                  {config.options.map((option) => {
+                  <label className="sr-only" htmlFor={`${integration.id}-scope-search`}>
+                    Search {integration.name} scope
+                  </label>
+                  <input
+                    id={`${integration.id}-scope-search`}
+                    value={searchValue}
+                    onChange={(event) =>
+                      setScopeSearches((current) => ({
+                        ...current,
+                        [integration.id]: event.target.value,
+                      }))
+                    }
+                    placeholder={`Search ${integration.name.toLowerCase()} ${integration.id === "github" ? "repos" : "projects"}...`}
+                    className="h-11 rounded-md border border-[#cbd3c3] bg-white px-3 text-sm outline-none transition focus:border-[#1f5d3a] focus:ring-4 focus:ring-[#1f5d3a]/10 sm:col-span-2"
+                  />
+
+                  {visibleOptions.length === 0 ? (
+                    <p className="rounded-md border border-[#d9dfd0] bg-white px-4 py-3 text-sm text-[#66705f] sm:col-span-2">
+                      No matching options found.
+                    </p>
+                  ) : null}
+
+                  {visibleOptions.map((option) => {
                     const isSelected = scopedOptions.includes(option);
 
                     return (
