@@ -23,7 +23,7 @@ function SubmitControls() {
         {pending ? (
           <span className="inline-flex items-center gap-2">
             <LoaderCircle size={16} className="animate-spin" aria-hidden="true" />
-            Processing
+            Logging you in...
           </span>
         ) : (
           "Sign in"
