@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { CheckCircle2, DatabaseZap, Download, FileSearch, Sparkles } from "lucide-react";
 import { generateDraftFromEvidence, finalizeDraftForExport } from "@/app/drafts/[draftId]/actions";
@@ -35,6 +36,7 @@ const generationStages = [
 ] as const;
 
 export function DraftActionButtons({ draftId, canExport, isGenerated }: DraftActionButtonsProps) {
+  const router = useRouter();
   const [error, setError] = useState("");
   const [showGenerationOverlay, setShowGenerationOverlay] = useState(false);
   const [stageIndex, setStageIndex] = useState(0);
@@ -62,6 +64,8 @@ export function DraftActionButtons({ draftId, canExport, isGenerated }: DraftAct
     startGenerating(async () => {
       try {
         await generateDraftFromEvidence(draftId);
+        router.refresh();
+        setShowGenerationOverlay(false);
       } catch (caughtError) {
         setShowGenerationOverlay(false);
         setError(caughtError instanceof Error ? caughtError.message : "Could not generate draft.");
@@ -74,6 +78,7 @@ export function DraftActionButtons({ draftId, canExport, isGenerated }: DraftAct
     startFinalizing(async () => {
       try {
         await finalizeDraftForExport(draftId);
+        router.refresh();
       } catch (caughtError) {
         setError(caughtError instanceof Error ? caughtError.message : "Could not finalize draft.");
       }

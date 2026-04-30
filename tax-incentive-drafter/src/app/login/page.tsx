@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { continueInPreview, signInWithEmail } from "@/app/auth/actions";
+import { continueInPreview, signInWithPassword, signUpWithPassword } from "@/app/auth/actions";
 import { ActionButton, InlineMeta, Panel } from "@/components/ui/compliance";
 import { isDevAuthPreview } from "@/lib/auth";
 
@@ -12,8 +12,8 @@ type LoginPageProps = {
 };
 
 function formatLoginMessage(message: string) {
-  if (message.toLowerCase().includes("rate limit")) {
-    return "Too many sign-in links were requested. Wait a few minutes, then try again.";
+  if (message.toLowerCase().includes("invalid login")) {
+    return "Email or password is incorrect.";
   }
 
   return message;
@@ -38,7 +38,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <p className="mt-3 text-sm leading-6 text-[#66705f]">
           {isPreview
             ? "Supabase is not configured locally yet, so this preview uses a demo founder session."
-            : "We will send you a secure email link. No password needed."}
+            : "Sign in with your email and password, or create an account if this is your first time."}
         </p>
 
         {isPreview ? (
@@ -52,7 +52,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </ActionButton>
           </form>
         ) : (
-          <form action={signInWithEmail} className="mt-8 space-y-4">
+          <form className="mt-8 space-y-4">
             <input type="hidden" name="next" value={next} />
             <label className="block text-sm font-semibold" htmlFor="email">
               Work email
@@ -66,12 +66,33 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               placeholder="founder@startup.com"
               className="h-12 w-full rounded-md border border-[#cbd3c3] bg-white px-4 text-base outline-none transition focus:border-[#1f5d3a] focus:ring-4 focus:ring-[#1f5d3a]/10"
             />
+            <label className="block text-sm font-semibold" htmlFor="password">
+              Password
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              minLength={6}
+              autoComplete="current-password"
+              placeholder="Minimum 6 characters"
+              className="h-12 w-full rounded-md border border-[#cbd3c3] bg-white px-4 text-base outline-none transition focus:border-[#1f5d3a] focus:ring-4 focus:ring-[#1f5d3a]/10"
+            />
             <ActionButton
               type="submit"
+              formAction={signInWithPassword}
               className="h-12 w-full"
             >
-              Send sign-in link
+              Sign in
             </ActionButton>
+            <button
+              type="submit"
+              formAction={signUpWithPassword}
+              className="h-12 w-full rounded-md border border-[#cbd3c3] bg-white px-4 text-sm font-semibold text-[#1f5d3a] transition hover:border-[#1f5d3a] hover:bg-[#f7fbf6]"
+            >
+              Create account
+            </button>
           </form>
         )}
 
