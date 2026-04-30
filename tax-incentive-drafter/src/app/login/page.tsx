@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { continueInPreview, signInWithPassword, signUpWithPassword } from "@/app/auth/actions";
+import { continueInPreview } from "@/app/auth/actions";
+import { LoginForm } from "@/app/login/login-form";
 import { ActionButton, InlineMeta, Panel } from "@/components/ui/compliance";
 import { isDevAuthPreview } from "@/lib/auth";
 
@@ -52,48 +53,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </ActionButton>
           </form>
         ) : (
-          <form className="mt-8 space-y-4">
-            <input type="hidden" name="next" value={next} />
-            <label className="block text-sm font-semibold" htmlFor="email">
-              Work email
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              placeholder="founder@startup.com"
-              className="h-12 w-full rounded-md border border-[#cbd3c3] bg-white px-4 text-base outline-none transition focus:border-[#1f5d3a] focus:ring-4 focus:ring-[#1f5d3a]/10"
-            />
-            <label className="block text-sm font-semibold" htmlFor="password">
-              Password
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              minLength={6}
-              autoComplete="current-password"
-              placeholder="Minimum 6 characters"
-              className="h-12 w-full rounded-md border border-[#cbd3c3] bg-white px-4 text-base outline-none transition focus:border-[#1f5d3a] focus:ring-4 focus:ring-[#1f5d3a]/10"
-            />
-            <ActionButton
-              type="submit"
-              formAction={signInWithPassword}
-              className="h-12 w-full"
-            >
-              Sign in
-            </ActionButton>
-            <button
-              type="submit"
-              formAction={signUpWithPassword}
-              className="h-12 w-full rounded-md border border-[#cbd3c3] bg-white px-4 text-sm font-semibold text-[#1f5d3a] transition hover:border-[#1f5d3a] hover:bg-[#f7fbf6]"
-            >
-              Create account
-            </button>
-          </form>
+          <LoginForm next={next} />
         )}
 
         {params.error ? (
