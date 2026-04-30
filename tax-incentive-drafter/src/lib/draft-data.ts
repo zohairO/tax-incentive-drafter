@@ -40,12 +40,43 @@ export type DraftReviewSection = {
   question?: string;
   inputLabel?: string;
   response?: string;
+  decision?: "pending" | "accepted" | "rejected";
+  sourceRefs?: string[];
+  confidence?: number;
+  criteria?: {
+    outcomeUnknown: string;
+    priorResearch: string;
+    competentProfessionalAssessment: string;
+    hypothesis: string;
+    experiments: string;
+    observations: string;
+    conclusions: string;
+    newKnowledgePurpose: string;
+    differenceFromExistingKnowledge: string;
+    excludedActivityAssessment: string;
+    evidenceTraceability: string;
+  } | null;
 };
 
 export type DraftReviewData = {
   sections: DraftReviewSection[];
   checklist?: string[];
   notes?: string;
+  generatedAt?: string;
+  supportingActivities?: {
+    title: string;
+    relatedCoreActivityId: string;
+    connection: string;
+    dominantPurpose: string;
+    evidence: string[];
+    sourceRefs: string[];
+  }[];
+  excludedActivities?: {
+    title: string;
+    reason: string;
+    evidence: string[];
+    sourceRefs: string[];
+  }[];
 };
 
 export type DraftRecord = {
@@ -70,6 +101,17 @@ export type IntegrationRecord = {
   status: IntegrationStatus;
   account_name: string | null;
   auth_metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type IngestionRunRecord = {
+  id: string;
+  user_id: string;
+  draft_id: string;
+  status: "running" | "completed" | "failed";
+  evidence_count: number;
+  error_message: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -398,6 +440,41 @@ export async function updateDraftReviewDataForCurrentUser(
   }
 }
 
+export async function getLatestIngestionRunForDraft(draftId: string) {
+  const user = await requireAppUser();
+
+  if (isDevAuthPreview()) {
+    return null;
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("ingestion_runs")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("draft_id", draftId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    return null;
+  }
+
+  return data
+    ? {
+        id: String(data.id),
+        user_id: String(data.user_id),
+        draft_id: String(data.draft_id),
+        status: data.status === "completed" || data.status === "failed" ? data.status : "running",
+        evidence_count: Number(data.evidence_count ?? 0),
+        error_message: data.error_message ? String(data.error_message) : null,
+        created_at: String(data.created_at),
+        updated_at: String(data.updated_at),
+      } satisfies IngestionRunRecord
+    : null;
+}
+
 export function buildOverviewStats(drafts: DraftRecord[], integrations: IntegrationRecord[]) {
   return [
     {
@@ -453,12 +530,44 @@ export function getDraftSectionStats(draft: DraftRecord) {
   };
 }
 
+export function calculateDraftProgress(draft: DraftRecord) {
+  if (draft.export_ready || draft.status === "ready_to_export") {
+    return 100;
+  }
+
+  const sections = draft.review_data.sections ?? [];
+  const generated = Boolean(draft.review_data.generatedAt);
+
+  if (sections.length === 0) {
+    return 15;
+  }
+
+  const decisionCount = sections.filter((section) =>
+    section.decision === "accepted" || section.decision === "rejected",
+  ).length;
+  const questionSections = sections.filter((section) => section.type === "question");
+  const answeredQuestionCount = questionSections.filter((section) => section.response?.trim()).length;
+  const decisionProgress = sections.length > 0 ? decisionCount / sections.length : 0;
+  const founderProgress =
+    questionSections.length > 0 ? answeredQuestionCount / questionSections.length : 1;
+
+  if (!generated) {
+    return 25;
+  }
+
+  return Math.round(55 + decisionProgress * 25 + founderProgress * 20);
+}
+
+export function isGeneratedDraft(draft: DraftRecord) {
+  return Boolean(draft.review_data.generatedAt);
+}
+
 function normalizeDraftRows(rows: Record<string, unknown>[]) {
   return rows.map(normalizeDraftRow);
 }
 
 function normalizeDraftRow(row: Record<string, unknown>): DraftRecord {
-  return {
+  const draft: DraftRecord = {
     id: String(row.id),
     user_id: String(row.user_id),
     name: String(row.name ?? "Untitled draft"),
@@ -476,6 +585,11 @@ function normalizeDraftRow(row: Record<string, unknown>): DraftRecord {
     export_ready: Boolean(row.export_ready),
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
+  };
+
+  return {
+    ...draft,
+    progress: calculateDraftProgress(draft),
   };
 }
 
@@ -645,6 +759,7 @@ export function buildReviewData(input: {
   });
   const primarySources = sourceLabels.length > 0 ? sourceLabels : ["Founder context"];
   const scopedItems = Object.entries(input.integrationConfig)
+    .filter(([integration]) => !integration.startsWith("__"))
     .flatMap(([integration, values]) => values.map((value) => `${integration}: ${value}`))
     .slice(0, 4);
 

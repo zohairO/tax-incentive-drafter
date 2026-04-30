@@ -1,12 +1,16 @@
 import { CheckCircle2, CircleDashed } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { DraftActionButtons } from "@/app/drafts/[draftId]/draft-action-buttons";
 import { FounderResponseForm } from "@/app/drafts/[draftId]/founder-response-form";
+import { SectionDecisionControls } from "@/app/drafts/[draftId]/section-decision-controls";
 import { MetricBlock, Panel, StatusBadge } from "@/components/ui/compliance";
 import {
   formatDraftStatus,
   formatRelativeTime,
   getDraftOrNotFound,
   getDraftSectionStats,
+  getLatestIngestionRunForDraft,
+  isGeneratedDraft,
 } from "@/lib/draft-data";
 
 type DraftPageProps = {
@@ -18,8 +22,11 @@ type DraftPageProps = {
 export default async function DraftDetailPage({ params }: DraftPageProps) {
   const { draftId } = await params;
   const draft = await getDraftOrNotFound(draftId);
+  const latestRun = await getLatestIngestionRunForDraft(draftId);
   const stats = getDraftSectionStats(draft);
   const isReady = draft.status === "ready_to_export";
+  const isGenerated = isGeneratedDraft(draft);
+  const dateRange = draft.integration_config.__date_range ?? [];
 
   return (
     <AppShell
@@ -43,12 +50,12 @@ export default async function DraftDetailPage({ params }: DraftPageProps) {
                 </StatusBadge>
               </div>
               <h2 className="mt-4 text-3xl font-semibold tracking-tight text-[#18201b]">
-                Candidate draft review
+                {isGenerated ? "Candidate draft review" : "Draft ready for generation"}
               </h2>
               <p className="mt-3 max-w-3xl text-base leading-7 text-[#59645b]">
-                Review the generated candidate claims for {draft.name}, add
-                founder context where needed, and prepare the draft for adviser
-                review.
+                {isGenerated
+                  ? `Review the generated candidate claims for ${draft.name}, add founder context where needed, and prepare the draft for adviser review.`
+                  : "This draft has saved scope and date range only. Click Generate Draft to ingest GitHub/Jira evidence and create real RDTI candidate sections."}
               </p>
             </div>
 
@@ -70,6 +77,11 @@ export default async function DraftDetailPage({ params }: DraftPageProps) {
               <p className="mt-3 text-sm leading-6 text-[#66705f]">
                 {stats.sectionCount} review section{stats.sectionCount === 1 ? "" : "s"} ready for founder review.
               </p>
+              {Array.isArray(dateRange) && dateRange.length === 2 ? (
+                <p className="mt-2 text-sm leading-6 text-[#66705f]">
+                  Date range: {dateRange[0]} to {dateRange[1]}
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -87,6 +99,28 @@ export default async function DraftDetailPage({ params }: DraftPageProps) {
               />
             ))}
           </div>
+          {latestRun ? (
+            <div className="mt-5 rounded-lg border border-[#e3e8dc] bg-[#fbfcf8] p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusBadge tone={latestRun.status === "failed" ? "danger" : latestRun.status === "completed" ? "success" : "warning"}>
+                  Generation {latestRun.status}
+                </StatusBadge>
+                <span className="text-sm text-[#66705f]">
+                  {latestRun.evidence_count} evidence item{latestRun.evidence_count === 1 ? "" : "s"}
+                </span>
+              </div>
+              {latestRun.error_message ? (
+                <p className="mt-2 text-sm font-medium text-[#9d2f1e]">
+                  {latestRun.error_message}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+          {!isGenerated ? (
+            <div className="mt-5 rounded-lg border border-[#ead49b] bg-[#fff8df] p-4 text-sm leading-6 text-[#745318]">
+              These are starter sections, not AI-generated claims. They will be replaced after evidence ingestion and generation completes.
+            </div>
+          ) : null}
         </Panel>
 
         <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
@@ -167,6 +201,14 @@ export default async function DraftDetailPage({ params }: DraftPageProps) {
                           initialResponse={section.response}
                         />
                       ) : null}
+
+                      {isGenerated ? (
+                        <SectionDecisionControls
+                          draftId={draft.id}
+                          sectionId={section.id}
+                          decision={section.decision}
+                        />
+                      ) : null}
                     </Panel>
                   </article>
                 );
@@ -175,6 +217,11 @@ export default async function DraftDetailPage({ params }: DraftPageProps) {
           </div>
 
           <Panel as="aside" className="h-fit">
+            <DraftActionButtons
+              draftId={draft.id}
+              canExport={draft.export_ready}
+              isGenerated={isGenerated}
+            />
             <p className="text-sm font-semibold text-[#263029]">
               Review checklist
             </p>
